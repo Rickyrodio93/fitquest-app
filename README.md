@@ -58,17 +58,61 @@ src/
 
 - **GymCheckIn**: supporto per l'uso in palestra (check-in su postazioni condivise).
 
-## Setup locale
+## Setup locale con Neon (database gratuito)
+
+### 1. Crea il database su Neon
+
+1. Vai su [neon.com](https://neon.com) e registrati (gratuito, nessuna carta richiesta per il piano free)
+2. Crea un nuovo progetto — dagli un nome tipo "fitquest"
+3. Nella dashboard del progetto, copia la **connection string** mostrata (inizia con `postgresql://` e include già `?sslmode=require` alla fine — lasciala così, serve per la connessione sicura)
+
+### 2. Configura il progetto
 
 ```bash
 npm install
-cp .env.example .env       # poi compila DATABASE_URL e NEXTAUTH_SECRET
-npx prisma migrate dev     # crea le tabelle nel DB
+cp .env.example .env
+```
+
+Apri `.env` e incolla la connection string di Neon in `DATABASE_URL`:
+
+```
+DATABASE_URL="postgresql://tuo-utente:password@ep-xxxxx.neon.tech/neondb?sslmode=require"
+```
+
+Genera anche un valore per `NEXTAUTH_SECRET` (basta una stringa casuale):
+
+```bash
+# Su Mac/Linux/WSL:
+openssl rand -base64 32
+# Su Windows (PowerShell):
+[Convert]::ToBase64String((1..32|%{Get-Random -Max 256}))
+```
+
+Incollalo in `.env` come `NEXTAUTH_SECRET`.
+
+### 3. Crea le tabelle e popola con dati demo
+
+```bash
+npx prisma generate
+npx prisma migrate dev --name init
+npm run db:seed
+```
+
+Il seed crea un utente demo già pronto:
+- **Email:** `demo@fitquest.app`
+- **Password:** `demo1234`
+
+Include avatar con storico, 3 obiettivi (2 attivi, 1 completato) e un piano di allenamento — utile per vedere subito l'app popolata invece di partire da zero.
+
+### 4. Avvia l'app
+
+```bash
 npm run dev
 ```
 
-Richiede un database PostgreSQL raggiungibile (locale, Docker, o servizio
-cloud come Supabase/Neon/Railway).
+Apri [http://localhost:3000](http://localhost:3000) e accedi con le credenziali demo, oppure registra un account nuovo.
+
+> **Nota su Neon:** il piano gratuito "sospende" il database dopo un periodo di inattività — la prima richiesta dopo una pausa può risultare più lenta (qualche secondo) mentre si riattiva. È normale, non un errore.
 
 ## Prossimi passi
 
