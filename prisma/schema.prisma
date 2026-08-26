@@ -102,6 +102,9 @@ model BodyMetric {
 
   createdAt    DateTime   @default(now())
 
+  // Evita duplicati quando un provider re-invia lo stesso campione
+  // (comune con sync periodici o retry di webhook)
+  @@unique([userId, type, recordedAt, source])
   @@index([userId, type, recordedAt])
 }
 

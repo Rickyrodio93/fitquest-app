@@ -24,6 +24,9 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [planMessage, setPlanMessage] = useState<string | null>(null);
+  const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [appleToken, setAppleToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -46,6 +49,35 @@ export default function DashboardPage() {
       .then((r) => r.json())
       .then((data) => setGoals(data.goals ?? []));
   }, [status, router]);
+
+  async function handleSyncGoogleHealth() {
+    setIsSyncingGoogle(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch("/api/integrations/google-health/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync fallito");
+      setSyncMessage(
+        data.avatarRecalibrated
+          ? `${data.stored} dati sincronizzati — avatar aggiornato.`
+          : `${data.stored} dati sincronizzati.`
+      );
+      // Ricarica l'avatar per riflettere un'eventuale ricalibrazione
+      const avatarRes = await fetch("/api/avatar");
+      const avatarData = await avatarRes.json();
+      if (avatarData.avatar) setAvatar(avatarData.avatar);
+    } catch (err) {
+      setSyncMessage(err instanceof Error ? err.message : "Devi prima collegare Google Health.");
+    } finally {
+      setIsSyncingGoogle(false);
+    }
+  }
+
+  async function handleGenerateAppleToken() {
+    const res = await fetch("/api/integrations/apple-health/token", { method: "POST" });
+    const data = await res.json();
+    setAppleToken(data.token);
+  }
 
   async function handleGeneratePlan() {
     setIsGeneratingPlan(true);
@@ -141,6 +173,60 @@ export default function DashboardPage() {
                     })}
                 </ul>
               )}
+            </section>
+
+            {/* Connessioni wearable */}
+            <section className="rounded-lg border border-ink-line bg-ink-panel p-6">
+              <h2 className="font-display text-lg font-semibold text-paper">Connessioni</h2>
+              <p className="mt-1 text-sm text-paper-muted">
+                Sincronizza i dati dai tuoi dispositivi per calibrare l&apos;avatar con la realtà.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between rounded-md border border-ink-line p-3">
+                  <div>
+                    <p className="text-sm text-paper">Google Health</p>
+                    <p className="text-xs text-paper-muted">Fitbit, Pixel Watch</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <a
+                      href="/api/integrations/google-health/connect"
+                      className="rounded-md border border-ink-line px-3 py-1.5 text-xs text-paper-muted hover:text-paper"
+                    >
+                      Collega
+                    </a>
+                    <button
+                      onClick={handleSyncGoogleHealth}
+                      disabled={isSyncingGoogle}
+                      className="rounded-md bg-growth px-3 py-1.5 text-xs font-semibold text-ink hover:opacity-90 disabled:opacity-50"
+                    >
+                      {isSyncingGoogle ? "…" : "Sincronizza"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-md border border-ink-line p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-paper">Apple Health</p>
+                      <p className="text-xs text-paper-muted">Via Shortcuts (nessuna API cloud diretta)</p>
+                    </div>
+                    <button
+                      onClick={handleGenerateAppleToken}
+                      className="rounded-md border border-ink-line px-3 py-1.5 text-xs text-paper-muted hover:text-paper"
+                    >
+                      Genera token
+                    </button>
+                  </div>
+                  {appleToken && (
+                    <p className="mt-2 break-all rounded bg-ink px-2 py-1.5 font-mono text-[10px] text-growth">
+                      {appleToken}
+                    </p>
+                  )}
+                </div>
+
+                {syncMessage && <p className="font-mono text-xs text-growth">{syncMessage}</p>}
+              </div>
             </section>
 
             {/* Piano di allenamento */}
