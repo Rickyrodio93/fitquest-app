@@ -1,0 +1,32 @@
+# Dipendenze
+/node_modules
+
+# Next.js
+/.next/
+/out/
+
+# Build
+/build
+*.tsbuildinfo
+
+# Variabili d'ambiente (contengono segreti — non versionare mai)
+.env
+.env*.local
+
+# Prisma
+# (lo schema si versiona, i binari generati no)
+/node_modules/.prisma
+
+# Log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel

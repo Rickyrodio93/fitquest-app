@@ -1,0 +1,258 @@
+// ==========================================================
+// FitQuest — Schema del database
+// ==========================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- AUTH & UTENTE ----------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Contesto d'uso: allenamento a casa, in palestra, o entrambi
+  usageContext  UsageContext @default(HOME)
+
+  avatar        Avatar?
+  goals         Goal[]
+  workoutPlans  WorkoutPlan[]
+  workoutLogs   WorkoutLog[]
+  bodyMetrics   BodyMetric[]
+  integrations  WearableIntegration[]
+  gymCheckIns   GymCheckIn[]
+}
+
+enum UsageContext {
+  HOME
+  GYM
+  BOTH
+}
+
+// ---------- AVATAR ----------
+// L'avatar rappresenta visivamente lo stato fisico dell'utente.
+// Non salviamo un'immagine statica: salviamo "parametri di stato"
+// da cui il renderer (2D/3D) genera l'aspetto visivo.
+
+model Avatar {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Parametri base creati in onboarding
+  gender           AvatarGender
+  heightCm         Int
+
+  // Stato fisico corrente (0-100), motore che determina l'aspetto
+  muscleLevel      Int      @default(20)   // 0 = magro/atrofico, 100 = massa massima
+  fatLevel         Int      @default(30)   // 0 = definito, 100 = massa grassa alta
+  staminaLevel     Int      @default(20)   // riflette costanza/cardio
+
+  // Storico delle evoluzioni, per animazioni "prima/dopo" e progressi
+  history          AvatarStateSnapshot[]
+
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+}
+
+enum AvatarGender {
+  MASCULINE
+  FEMININE
+  NEUTRAL
+}
+
+// Snapshot storico: ogni volta che l'avatar cambia stato in modo
+// significativo (es. dopo il calcolo settimanale), salviamo uno snapshot
+model AvatarStateSnapshot {
+  id            String   @id @default(cuid())
+  avatarId      String
+  avatar        Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+
+  muscleLevel   Int
+  fatLevel      Int
+  staminaLevel  Int
+  reason        String?  // es. "Obiettivo completato: Squat 60kg"
+
+  capturedAt    DateTime @default(now())
+}
+
+// ---------- METRICHE CORPOREE ----------
+// Dati grezzi importati da wearable o inseriti manualmente
+
+model BodyMetric {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type         MetricType
+  value        Float
+  unit         String     // kg, %, bpm, kcal, min...
+  recordedAt   DateTime
+  source       MetricSource @default(MANUAL)
+
+  createdAt    DateTime   @default(now())
+
+  @@index([userId, type, recordedAt])
+}
+
+enum MetricType {
+  WEIGHT
+  BODY_FAT_PERCENT
+  MUSCLE_MASS
+  HEART_RATE
+  CALORIES_BURNED
+  STEPS
+  WORKOUT_MINUTES
+  SLEEP_HOURS
+}
+
+enum MetricSource {
+  MANUAL
+  APPLE_HEALTH
+  GOOGLE_HEALTH
+  PROTOCOL_DEVICE
+  GYM_KIOSK
+}
+
+// ---------- OBIETTIVI ----------
+
+model Goal {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title         String
+  description   String?
+  category      GoalCategory
+  targetValue   Float
+  currentValue  Float       @default(0)
+  unit          String
+
+  status        GoalStatus  @default(ACTIVE)
+  startDate     DateTime    @default(now())
+  deadline      DateTime?
+  completedAt   DateTime?
+
+  // Impatto sull'avatar al completamento
+  avatarImpact  Json?       // es. { "muscleLevel": +5, "fatLevel": -3 }
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum GoalCategory {
+  STRENGTH        // es. sollevare più peso
+  ENDURANCE       // es. correre più a lungo
+  CONSISTENCY     // es. N allenamenti in M giorni
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  CUSTOM
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  PAUSED
+}
+
+// ---------- PIANI DI ALLENAMENTO ----------
+
+model WorkoutPlan {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title        String
+  goalFocus    GoalCategory?
+  level        ExperienceLevel
+  environment  UsageContext  // HOME, GYM, BOTH
+  durationWeeks Int
+
+  sessions     WorkoutSession[]
+
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+}
+
+enum ExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model WorkoutSession {
+  id            String       @id @default(cuid())
+  planId        String
+  plan          WorkoutPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  dayOfWeek     Int          // 1-7
+  title         String       // es. "Push Day"
+  exercises     Exercise[]
+}
+
+model Exercise {
+  id            String          @id @default(cuid())
+  sessionId     String
+  session       WorkoutSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  name          String
+  sets          Int
+  reps          String          // "8-12" o "AMRAP"
+  restSeconds   Int?
+  notes         String?
+}
+
+// Log effettivo di un allenamento svolto (collegato o meno a un piano)
+model WorkoutLog {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title        String
+  durationMin  Int
+  caloriesBurned Int?
+  source       MetricSource @default(MANUAL)
+  performedAt  DateTime  @default(now())
+}
+
+// ---------- INTEGRAZIONI WEARABLE ----------
+
+model WearableIntegration {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider      MetricSource
+  accessToken   String?
+  refreshToken  String?
+  connectedAt   DateTime     @default(now())
+  lastSyncAt    DateTime?
+  isActive      Boolean      @default(true)
+
+  @@unique([userId, provider])
+}
+
+// ---------- MODALITÀ PALESTRA ----------
+// Permette check-in in palestra tramite QR/badge, per usare l'app
+// anche su postazioni condivise
+
+model GymCheckIn {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  gymName      String
+  checkedInAt  DateTime @default(now())
+  checkedOutAt DateTime?
+}

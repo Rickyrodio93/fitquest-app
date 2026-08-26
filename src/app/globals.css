@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-ink text-paper antialiased font-body;
+}
+
+h1, h2, h3, .font-display {
+  @apply font-display;
+  letter-spacing: -0.01em;
+}
+
+.font-mono, .stat-value {
+  font-variant-numeric: tabular-nums;
+}
