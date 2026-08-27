@@ -98,7 +98,7 @@ export function AvatarPreview({ state, athleteName = "Il tuo atleta" }: AvatarPr
   );
 }
 
-function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
+export function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="flex items-center gap-3">
       <span className="w-24 shrink-0 font-mono text-[11px] uppercase tracking-wide text-paper-muted">

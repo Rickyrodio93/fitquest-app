@@ -3,8 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { AvatarPreview } from "@/features/avatar/ui/AvatarPreview";
+import dynamic from "next/dynamic";
 import type { AvatarState } from "@/features/avatar";
+
+const Avatar3D = dynamic(() => import("@/features/avatar/ui/Avatar3D"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-96 w-full max-w-sm items-center justify-center rounded-lg border border-ink-line bg-ink-panel">
+      <p className="font-mono text-xs text-paper-muted">Caricamento avatar 3D…</p>
+    </div>
+  ),
+});
 
 interface Goal {
   id: string;
@@ -134,7 +143,7 @@ export default function DashboardPage() {
         </header>
 
         <div className="grid gap-6 md:grid-cols-[0.9fr_1.1fr] md:items-start">
-          <AvatarPreview state={avatar} athleteName={session?.user?.name ?? "Il tuo atleta"} />
+          <Avatar3D state={avatar} athleteName={session?.user?.name ?? "Il tuo atleta"} />
 
           <div className="space-y-6">
             {/* Obiettivi attivi */}

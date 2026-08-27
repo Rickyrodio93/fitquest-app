@@ -3,8 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { AvatarPreview } from "@/features/avatar/ui/AvatarPreview";
+import dynamic from "next/dynamic";
 import { normalizeBodyFatPercent, normalizeMuscleMassPercent } from "@/features/avatar";
+
+const Avatar3D = dynamic(() => import("@/features/avatar/ui/Avatar3D"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-96 w-full max-w-sm items-center justify-center rounded-lg border border-ink-line bg-ink-panel">
+      <p className="font-mono text-xs text-paper-muted">Caricamento avatar 3D…</p>
+    </div>
+  ),
+});
 
 type Gender = "MASCULINE" | "FEMININE" | "NEUTRAL";
 type UsageContext = "HOME" | "GYM" | "BOTH";
@@ -265,7 +274,7 @@ export default function OnboardingPage() {
 
         {/* Colonna anteprima — sticky, si aggiorna dal vivo */}
         <div className="md:sticky md:top-10">
-          <AvatarPreview state={previewState} athleteName="Anteprima" />
+          <Avatar3D state={previewState} athleteName="Anteprima" />
         </div>
       </div>
     </main>
