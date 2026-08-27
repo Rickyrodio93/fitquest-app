@@ -310,6 +310,12 @@ export default function WorkoutsPage() {
                       </p>
                       <h3 className="font-display text-base font-semibold text-paper">{session.title}</h3>
                     </div>
+                    <a
+                      href={`/workouts/session/${session.id}`}
+                      className="rounded-md bg-effort px-3 py-1.5 text-xs font-semibold text-ink hover:opacity-90"
+                    >
+                      ▶ Inizia allenamento
+                    </a>
                   </div>
 
                   <table className="w-full text-left text-sm">

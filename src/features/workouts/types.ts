@@ -35,6 +35,9 @@ export interface ExerciseDefinition {
   // Ambienti in cui l'esercizio è realisticamente eseguibile
   compatibleEnvironments: Environment[];
   minLevel: ExperienceLevel;
+  // Pattern di movimento — usato dal "personal trainer 3D" per scegliere
+  // quale animazione dell'avatar mostrare durante l'esecuzione
+  movementPattern: "SQUAT" | "PUSH" | "PULL" | "CORE" | "CARDIO";
 }
 
 export interface SplitSessionTemplate {
