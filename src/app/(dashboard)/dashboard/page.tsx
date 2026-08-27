@@ -141,7 +141,9 @@ export default function DashboardPage() {
             <section className="rounded-lg border border-ink-line bg-ink-panel p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-display text-lg font-semibold text-paper">Obiettivi attivi</h2>
-                <span className="font-mono text-xs text-paper-muted">{goals.length}</span>
+                <a href="/goals" className="font-mono text-xs text-growth hover:underline">
+                  Vedi tutti →
+                </a>
               </div>
 
               {goals.length === 0 ? (
