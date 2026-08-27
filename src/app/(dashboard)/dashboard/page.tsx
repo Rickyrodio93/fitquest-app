@@ -31,8 +31,6 @@ export default function DashboardPage() {
 
   const [avatar, setAvatar] = useState<AvatarState | null | undefined>(undefined);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-  const [planMessage, setPlanMessage] = useState<string | null>(null);
   const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [appleToken, setAppleToken] = useState<string | null>(null);
@@ -86,30 +84,6 @@ export default function DashboardPage() {
     const res = await fetch("/api/integrations/apple-health/token", { method: "POST" });
     const data = await res.json();
     setAppleToken(data.token);
-  }
-
-  async function handleGeneratePlan() {
-    setIsGeneratingPlan(true);
-    setPlanMessage(null);
-    try {
-      const res = await fetch("/api/workouts/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          level: "BEGINNER",
-          environment: "BOTH",
-          daysPerWeek: 3,
-          goalFocus: "CONSISTENCY",
-          durationWeeks: 8,
-        }),
-      });
-      if (!res.ok) throw new Error("Generazione fallita");
-      setPlanMessage("Piano generato — 3 sessioni/settimana per 8 settimane.");
-    } catch {
-      setPlanMessage("Qualcosa è andato storto. Riprova.");
-    } finally {
-      setIsGeneratingPlan(false);
-    }
   }
 
   if (status === "loading" || avatar === undefined) {
@@ -242,18 +216,15 @@ export default function DashboardPage() {
 
             {/* Piano di allenamento */}
             <section className="rounded-lg border border-ink-line bg-ink-panel p-6">
-              <h2 className="font-display text-lg font-semibold text-paper">Piano di allenamento</h2>
-              <p className="mt-1 text-sm text-paper-muted">
-                Genera un piano personalizzato in base al tuo livello e ai tuoi obiettivi.
+              <div className="mb-1 flex items-center justify-between">
+                <h2 className="font-display text-lg font-semibold text-paper">Piano di allenamento</h2>
+                <a href="/workouts" className="font-mono text-xs text-growth hover:underline">
+                  Apri →
+                </a>
+              </div>
+              <p className="text-sm text-paper-muted">
+                Genera o consulta il tuo piano personalizzato, e segna le sessioni completate.
               </p>
-              <button
-                onClick={handleGeneratePlan}
-                disabled={isGeneratingPlan}
-                className="mt-4 rounded-md bg-effort px-4 py-2 text-sm font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {isGeneratingPlan ? "Generazione…" : "Genera piano"}
-              </button>
-              {planMessage && <p className="mt-3 font-mono text-xs text-growth">{planMessage}</p>}
             </section>
           </div>
         </div>
