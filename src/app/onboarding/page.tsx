@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { normalizeBodyFatPercent, normalizeMuscleMassPercent } from "@/features/avatar";
+import { buttonStyles } from "@/components/ui/buttonStyles";
 
 const Avatar3D = dynamic(() => import("@/features/avatar/ui/Avatar3D"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-96 w-full max-w-sm items-center justify-center rounded-lg border border-ink-line bg-ink-panel">
-      <p className="font-mono text-xs text-paper-muted">Caricamento avatar 3D…</p>
+    <div className="flex h-64 w-full min-w-0 items-center justify-center rounded-xl border border-ink-line bg-ink-panel sm:h-80">
+      <p className="text-sm text-paper-muted">Caricamento avatar 3D…</p>
     </div>
   ),
 });
@@ -89,10 +90,10 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-grid bg-grid px-4 py-10">
-      <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-start">
+    <main className="min-h-screen bg-ink px-4 py-6 sm:py-10">
+      <div className="mx-auto grid min-w-0 max-w-4xl gap-6 sm:gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-start">
         {/* Colonna form */}
-        <div className="rounded-lg border border-ink-line bg-ink-panel p-8">
+        <div className="min-w-0 rounded-xl border border-ink-line bg-ink-panel p-5 sm:p-8">
           {/* Stepper */}
           <div className="mb-6 flex items-center gap-2">
             {STEPS.map((label, i) => (
@@ -150,10 +151,7 @@ export default function OnboardingPage() {
                 </div>
               </FieldGroup>
 
-              <button
-                onClick={() => setStep(1)}
-                className="w-full rounded-md bg-growth py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
-              >
+              <button onClick={() => setStep(1)} className={`w-full ${buttonStyles.primary}`}>
                 Continua
               </button>
             </div>
@@ -175,10 +173,10 @@ export default function OnboardingPage() {
                       <button
                         key={opt.value}
                         onClick={() => setSelfAssessedBuild(opt.value)}
-                        className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                        className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
                           selfAssessedBuild === opt.value
                             ? "border-growth bg-growth/10 text-paper"
-                            : "border-ink-line text-paper-muted hover:border-ink-line/70"
+                            : "border-ink-line text-paper-muted hover:border-paper-muted"
                         }`}
                       >
                         {opt.label}
@@ -191,13 +189,13 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setUseKnownData((v) => !v)}
-                className="font-mono text-xs text-growth hover:underline"
+                className="text-sm text-growth hover:underline"
               >
                 {useKnownData ? "← Torna all'autovalutazione rapida" : "Ho dati precisi da bilancia/wearable →"}
               </button>
 
               {useKnownData && (
-                <div className="space-y-4 rounded-md border border-ink-line p-4">
+                <div className="space-y-4 rounded-lg border border-ink-line p-4">
                   <FieldGroup label={`% massa grassa — ${bodyFatPercent}%`}>
                     <input
                       type="range"
@@ -222,16 +220,10 @@ export default function OnboardingPage() {
               )}
 
               <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(0)}
-                  className="flex-1 rounded-md border border-ink-line py-2.5 text-sm text-paper-muted hover:text-paper"
-                >
+                <button onClick={() => setStep(0)} className={`flex-1 ${buttonStyles.secondary}`}>
                   Indietro
                 </button>
-                <button
-                  onClick={() => setStep(2)}
-                  className="flex-1 rounded-md bg-growth py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
-                >
+                <button onClick={() => setStep(2)} className={`flex-1 ${buttonStyles.primary}`}>
                   Continua
                 </button>
               </div>
@@ -248,23 +240,16 @@ export default function OnboardingPage() {
               </div>
 
               {error && (
-                <p className="rounded-md border border-caution/40 bg-caution/10 px-3 py-2 text-sm text-caution">
+                <p className="rounded-lg border border-caution/40 bg-caution/10 px-3 py-2 text-sm text-caution">
                   {error}
                 </p>
               )}
 
               <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(1)}
-                  className="flex-1 rounded-md border border-ink-line py-2.5 text-sm text-paper-muted hover:text-paper"
-                >
+                <button onClick={() => setStep(1)} className={`flex-1 ${buttonStyles.secondary}`}>
                   Indietro
                 </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={isSubmitting}
-                  className="flex-1 rounded-md bg-growth py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
+                <button onClick={handleConfirm} disabled={isSubmitting} className={`flex-1 ${buttonStyles.primary}`}>
                   {isSubmitting ? "Creazione…" : "Crea il mio avatar"}
                 </button>
               </div>
@@ -273,7 +258,7 @@ export default function OnboardingPage() {
         </div>
 
         {/* Colonna anteprima — sticky, si aggiorna dal vivo */}
-        <div className="md:sticky md:top-10">
+        <div className="min-w-0 md:sticky md:top-10">
           <Avatar3D state={previewState} athleteName="Anteprima" />
         </div>
       </div>
@@ -284,9 +269,7 @@ export default function OnboardingPage() {
 function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <span className="mb-2 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-        {label}
-      </span>
+      <span className="mb-2 block text-sm text-paper-muted">{label}</span>
       {children}
     </div>
   );
@@ -305,8 +288,8 @@ function OptionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
-        active ? "border-growth bg-growth/10 text-paper" : "border-ink-line text-paper-muted hover:border-ink-line/70"
+      className={`flex-1 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+        active ? "border-growth bg-growth/10 text-paper" : "border-ink-line text-paper-muted hover:border-paper-muted"
       }`}
     >
       {children}

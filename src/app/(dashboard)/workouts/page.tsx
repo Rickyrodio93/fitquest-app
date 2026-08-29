@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Card } from "@/components/ui/Card";
+import { TopNav } from "@/components/ui/TopNav";
+import { buttonStyles } from "@/components/ui/buttonStyles";
 
 interface Exercise {
   id: string;
@@ -57,9 +60,13 @@ const GOAL_FOCUS_LABELS: Record<string, string> = {
   CUSTOM: "Personalizzato",
 };
 
+const inputStyles =
+  "w-full rounded-lg border border-ink-line bg-ink px-3 py-2.5 text-sm text-paper outline-none focus:border-growth min-w-0";
+const labelStyles = "mb-1.5 block text-sm text-paper-muted";
+
 export default function WorkoutsPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   const [plan, setPlan] = useState<WorkoutPlan | null | undefined>(undefined);
   const [recentLogs, setRecentLogs] = useState<WorkoutLog[]>([]);
@@ -68,7 +75,6 @@ export default function WorkoutsPage() {
   const [loggingSessionId, setLoggingSessionId] = useState<string | null>(null);
   const [durationInputs, setDurationInputs] = useState<Record<string, string>>({});
 
-  // Form di generazione
   const [level, setLevel] = useState("BEGINNER");
   const [environment, setEnvironment] = useState("BOTH");
   const [daysPerWeek, setDaysPerWeek] = useState(3);
@@ -126,7 +132,8 @@ export default function WorkoutsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Errore");
 
-      const completedGoals = data.goalUpdates?.filter((g: { goal: { status: string } }) => g.goal.status === "COMPLETED") ?? [];
+      const completedGoals =
+        data.goalUpdates?.filter((g: { goal: { status: string } }) => g.goal.status === "COMPLETED") ?? [];
       if (completedGoals.length > 0) {
         setFeedback(`Sessione registrata — e hai completato ${completedGoals.length} obiettivo/i! Avatar aggiornato.`);
       } else if (data.avatar) {
@@ -145,147 +152,107 @@ export default function WorkoutsPage() {
   if (status === "loading" || plan === undefined) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-ink">
-        <p className="font-mono text-sm text-paper-muted">Caricamento…</p>
+        <p className="text-sm text-paper-muted">Caricamento…</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-grid bg-grid px-4 py-10">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-8 flex items-center justify-between">
-          <div>
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-paper-muted">
-              FitQuest
-            </span>
-            <h1 className="font-display text-2xl font-semibold text-paper">Piano di allenamento</h1>
-          </div>
-          <div className="flex gap-3">
-            <a href="/dashboard" className="font-mono text-xs text-paper-muted hover:text-paper">
-              ← Dashboard
-            </a>
-            <button
-              onClick={() => setShowGenerateForm((v) => !v)}
-              className="rounded-md bg-growth px-4 py-2 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
-            >
-              {showGenerateForm ? "Annulla" : plan ? "Rigenera piano" : "Genera piano"}
-            </button>
-          </div>
-        </header>
+    <main className="min-h-screen bg-ink px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-2xl min-w-0">
+        <TopNav userName={session?.user?.name} />
+
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-display text-2xl font-semibold text-paper">Piano di allenamento</h1>
+          <button onClick={() => setShowGenerateForm((v) => !v)} className={buttonStyles.primary}>
+            {showGenerateForm ? "Annulla" : plan ? "Rigenera piano" : "Genera piano"}
+          </button>
+        </div>
 
         {feedback && (
-          <p className="mb-6 rounded-md border border-growth/40 bg-growth/10 px-3 py-2 font-mono text-xs text-growth">
+          <p className="mb-6 rounded-lg border border-growth/40 bg-growth/10 px-3 py-2 text-sm text-growth">
             {feedback}
           </p>
         )}
 
-        {/* Form di generazione */}
         {showGenerateForm && (
-          <form
-            onSubmit={handleGenerate}
-            className="mb-8 space-y-4 rounded-lg border border-ink-line bg-ink-panel p-6"
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Livello
-                </span>
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className="w-full rounded-md border border-ink-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-growth"
-                >
-                  {Object.entries(LEVEL_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
-              </label>
+          <form onSubmit={handleGenerate} className="mb-6">
+            <Card className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className={labelStyles}>Livello</span>
+                  <select value={level} onChange={(e) => setLevel(e.target.value)} className={inputStyles}>
+                    {Object.entries(LEVEL_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Dove ti alleni
-                </span>
-                <select
-                  value={environment}
-                  onChange={(e) => setEnvironment(e.target.value)}
-                  className="w-full rounded-md border border-ink-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-growth"
-                >
-                  {Object.entries(ENV_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
-              </label>
+                <label className="block">
+                  <span className={labelStyles}>Dove ti alleni</span>
+                  <select value={environment} onChange={(e) => setEnvironment(e.target.value)} className={inputStyles}>
+                    {Object.entries(ENV_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Obiettivo principale
-                </span>
-                <select
-                  value={goalFocus}
-                  onChange={(e) => setGoalFocus(e.target.value)}
-                  className="w-full rounded-md border border-ink-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-growth"
-                >
-                  {Object.entries(GOAL_FOCUS_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
-              </label>
+                <label className="block">
+                  <span className={labelStyles}>Obiettivo principale</span>
+                  <select value={goalFocus} onChange={(e) => setGoalFocus(e.target.value)} className={inputStyles}>
+                    {Object.entries(GOAL_FOCUS_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                </label>
 
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Giorni/settimana — {daysPerWeek}
-                </span>
-                <input
-                  type="range"
-                  min={1}
-                  max={6}
-                  value={daysPerWeek}
-                  onChange={(e) => setDaysPerWeek(Number(e.target.value))}
-                  className="w-full accent-growth"
-                />
-              </label>
+                <label className="block">
+                  <span className={labelStyles}>Giorni/settimana — {daysPerWeek}</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={6}
+                    value={daysPerWeek}
+                    onChange={(e) => setDaysPerWeek(Number(e.target.value))}
+                    className="w-full accent-growth"
+                  />
+                </label>
 
-              <label className="block sm:col-span-2">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Durata — {durationWeeks} settimane
-                </span>
-                <input
-                  type="range"
-                  min={4}
-                  max={16}
-                  value={durationWeeks}
-                  onChange={(e) => setDurationWeeks(Number(e.target.value))}
-                  className="w-full accent-growth"
-                />
-              </label>
-            </div>
+                <label className="block sm:col-span-2">
+                  <span className={labelStyles}>Durata — {durationWeeks} settimane</span>
+                  <input
+                    type="range"
+                    min={4}
+                    max={16}
+                    value={durationWeeks}
+                    onChange={(e) => setDurationWeeks(Number(e.target.value))}
+                    className="w-full accent-growth"
+                  />
+                </label>
+              </div>
 
-            {plan && (
-              <p className="rounded-md border border-effort/40 bg-effort/10 px-3 py-2 text-xs text-effort">
-                Attenzione: generare un nuovo piano disattiverà quello attuale.
-              </p>
-            )}
+              {plan && (
+                <p className="rounded-lg border border-effort/40 bg-effort/10 px-3 py-2 text-sm text-effort">
+                  Attenzione: generare un nuovo piano disattiverà quello attuale.
+                </p>
+              )}
 
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="w-full rounded-md bg-growth py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {isGenerating ? "Generazione…" : "Genera piano"}
-            </button>
+              <button type="submit" disabled={isGenerating} className={`w-full ${buttonStyles.primary}`}>
+                {isGenerating ? "Generazione…" : "Genera piano"}
+              </button>
+            </Card>
           </form>
         )}
 
-        {/* Piano attivo */}
         {!plan ? (
-          <p className="rounded-lg border border-dashed border-ink-line p-8 text-center text-sm text-paper-muted">
+          <p className="rounded-xl border border-dashed border-ink-line p-8 text-center text-sm text-paper-muted">
             Non hai ancora un piano di allenamento. Generane uno per iniziare.
           </p>
         ) : (
           <>
-            <div className="mb-6 rounded-lg border border-ink-line bg-ink-panel p-5">
+            <Card className="mb-4">
               <h2 className="font-display text-lg font-semibold text-paper">{plan.title}</h2>
-              <div className="mt-2 flex flex-wrap gap-3 font-mono text-[11px] text-paper-muted">
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-paper-muted">
                 <span>{LEVEL_LABELS[plan.level] ?? plan.level}</span>
                 <span>·</span>
                 <span>{ENV_LABELS[plan.environment] ?? plan.environment}</span>
@@ -298,88 +265,80 @@ export default function WorkoutsPage() {
                   </>
                 )}
               </div>
-            </div>
+            </Card>
 
             <div className="space-y-4">
               {plan.sessions.map((session) => (
-                <div key={session.id} className="rounded-lg border border-ink-line bg-ink-panel p-5">
-                  <div className="mb-3 flex items-center justify-between">
+                <Card key={session.id} className="min-w-0">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                        Giorno {session.dayOfWeek}
-                      </p>
+                      <p className="text-sm text-paper-muted">Giorno {session.dayOfWeek}</p>
                       <h3 className="font-display text-base font-semibold text-paper">{session.title}</h3>
                     </div>
-                    <a
-                      href={`/workouts/session/${session.id}`}
-                      className="rounded-md bg-effort px-3 py-1.5 text-xs font-semibold text-ink hover:opacity-90"
-                    >
+                    <a href={`/workouts/session/${session.id}`} className={buttonStyles.primary}>
                       ▶ Inizia allenamento
                     </a>
                   </div>
 
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="font-mono text-[10px] uppercase tracking-wide text-paper-muted">
-                        <th className="pb-2 font-normal">Esercizio</th>
-                        <th className="pb-2 font-normal">Serie</th>
-                        <th className="pb-2 font-normal">Reps</th>
-                        <th className="pb-2 font-normal">Recupero</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {session.exercises.map((ex) => (
-                        <tr key={ex.id} className="border-t border-ink-line/60">
-                          <td className="py-2 text-paper">{ex.name}</td>
-                          <td className="py-2 font-mono text-paper-muted">{ex.sets}</td>
-                          <td className="py-2 font-mono text-paper-muted">{ex.reps}</td>
-                          <td className="py-2 font-mono text-paper-muted">
-                            {ex.restSeconds ? `${ex.restSeconds}s` : "—"}
-                          </td>
+                  <div className="min-w-0 overflow-x-auto">
+                    <table className="w-full min-w-[420px] text-left text-sm">
+                      <thead>
+                        <tr className="text-xs text-paper-muted">
+                          <th className="pb-2 font-normal">Esercizio</th>
+                          <th className="pb-2 font-normal">Serie</th>
+                          <th className="pb-2 font-normal">Reps</th>
+                          <th className="pb-2 font-normal">Recupero</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {session.exercises.map((ex) => (
+                          <tr key={ex.id} className="border-t border-ink-line/60">
+                            <td className="py-2 text-paper">{ex.name}</td>
+                            <td className="py-2 font-mono text-xs text-paper-muted">{ex.sets}</td>
+                            <td className="py-2 font-mono text-xs text-paper-muted">{ex.reps}</td>
+                            <td className="py-2 font-mono text-xs text-paper-muted">
+                              {ex.restSeconds ? `${ex.restSeconds}s` : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                  <div className="mt-4 flex items-center gap-2 border-t border-ink-line pt-3">
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink-line pt-3">
                     <input
                       type="number"
                       placeholder="45"
                       value={durationInputs[session.id] ?? ""}
-                      onChange={(e) =>
-                        setDurationInputs((prev) => ({ ...prev, [session.id]: e.target.value }))
-                      }
-                      className="w-16 rounded-md border border-ink-line bg-ink px-2 py-1.5 text-sm text-paper outline-none focus:border-growth"
+                      onChange={(e) => setDurationInputs((prev) => ({ ...prev, [session.id]: e.target.value }))}
+                      className="w-16 min-w-0 rounded-lg border border-ink-line bg-ink px-2 py-1.5 text-sm text-paper outline-none focus:border-growth"
                     />
-                    <span className="font-mono text-[11px] text-paper-muted">min</span>
+                    <span className="text-sm text-paper-muted">min</span>
                     <button
                       onClick={() => handleLogSession(session)}
                       disabled={loggingSessionId === session.id}
-                      className="ml-auto rounded-md border border-growth/40 bg-growth/10 px-3 py-1.5 text-xs font-semibold text-growth hover:bg-growth/20 disabled:opacity-50"
+                      className={`ml-auto ${buttonStyles.secondary}`}
                     >
                       {loggingSessionId === session.id ? "…" : "Segna come completata"}
                     </button>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           </>
         )}
 
-        {/* Storico recente */}
         {recentLogs.length > 0 && (
           <section className="mt-8">
-            <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-paper-muted">
-              Ultimi allenamenti
-            </h2>
+            <h2 className="mb-3 text-sm font-medium text-paper-muted">Ultimi allenamenti</h2>
             <div className="space-y-2">
               {recentLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-center justify-between rounded-md border border-ink-line bg-ink-panel px-4 py-2.5 text-sm"
+                  className="flex min-w-0 items-center justify-between rounded-lg border border-ink-line/70 bg-ink-panel px-4 py-3 text-sm"
                 >
-                  <span className="text-paper">{log.title}</span>
-                  <span className="font-mono text-[11px] text-paper-muted">
+                  <span className="min-w-0 truncate text-paper">{log.title}</span>
+                  <span className="shrink-0 pl-3 text-sm text-paper-muted">
                     {log.durationMin} min · {new Date(log.performedAt).toLocaleDateString("it-IT")}
                   </span>
                 </div>

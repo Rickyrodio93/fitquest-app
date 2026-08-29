@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import type { AvatarState } from "@/features/avatar";
 import { getPatternForExerciseName } from "@/features/workouts/exerciseLibrary";
+import { buttonStyles } from "@/components/ui/buttonStyles";
 
 const AvatarTrainer = dynamic(() => import("@/features/avatar/ui/AvatarTrainer"), {
   ssr: false,
@@ -169,7 +170,7 @@ export default function WorkoutSessionPlayerPage() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink px-4 text-center">
         <p className="text-sm text-paper-muted">Non è stato possibile caricare questa sessione.</p>
-        <a href="/workouts" className="font-mono text-xs text-growth hover:underline">
+        <a href="/workouts" className="text-sm text-growth hover:underline">
           ← Torna al piano
         </a>
       </main>
@@ -178,23 +179,15 @@ export default function WorkoutSessionPlayerPage() {
 
   if (phase === "finished") {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-grid bg-grid px-4 text-center">
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-paper-muted">
-          Allenamento completato
-        </span>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-ink px-4 text-center">
+        <span className="text-sm text-paper-muted">Allenamento completato</span>
         <h1 className="font-display text-2xl font-semibold text-paper">{session.title}</h1>
         {completionMessage && <p className="max-w-sm text-sm text-growth">{completionMessage}</p>}
         <div className="flex gap-3">
-          <a
-            href="/dashboard"
-            className="rounded-md bg-growth px-5 py-2.5 text-sm font-semibold text-ink hover:opacity-90"
-          >
+          <a href="/dashboard" className={buttonStyles.primary}>
             Vai alla dashboard
           </a>
-          <a
-            href="/workouts"
-            className="rounded-md border border-ink-line px-5 py-2.5 text-sm text-paper-muted hover:text-paper"
-          >
+          <a href="/workouts" className={buttonStyles.secondary}>
             Torna al piano
           </a>
         </div>
@@ -203,19 +196,17 @@ export default function WorkoutSessionPlayerPage() {
   }
 
   return (
-    <main className="min-h-screen bg-grid bg-grid px-4 py-8">
-      <div className="mx-auto max-w-lg">
-        <header className="mb-6 flex items-center justify-between">
-          <div>
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-paper-muted">
-              {planTitle}
-            </span>
-            <h1 className="font-display text-xl font-semibold text-paper">{session.title}</h1>
+    <main className="min-h-screen bg-ink px-4 py-6 sm:py-8">
+      <div className="mx-auto max-w-lg min-w-0">
+        <header className="mb-6 flex min-w-0 items-center justify-between gap-3">
+          <div className="min-w-0">
+            <span className="text-sm text-paper-muted">{planTitle}</span>
+            <h1 className="truncate font-display text-xl font-semibold text-paper">{session.title}</h1>
           </div>
           <button
             onClick={finishWorkout}
             disabled={isFinishing}
-            className="font-mono text-xs text-paper-muted hover:text-caution disabled:opacity-50"
+            className="shrink-0 text-sm text-paper-muted hover:text-caution disabled:opacity-50"
           >
             Termina
           </button>
@@ -234,22 +225,22 @@ export default function WorkoutSessionPlayerPage() {
         </div>
 
         {phase === "resting" ? (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-ink-line bg-ink-panel py-16">
-            <span className="font-mono text-xs uppercase tracking-wide text-paper-muted">Riposo</span>
+          <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-ink-line bg-ink-panel py-16">
+            <span className="text-sm text-paper-muted">Riposo</span>
             <span className="font-display text-5xl font-bold text-effort">{restSecondsLeft}s</span>
             <button
               onClick={() => setPhase("exercising")}
-              className="mt-2 font-mono text-xs text-paper-muted hover:text-paper"
+              className="mt-2 text-sm text-paper-muted hover:text-paper"
             >
               Salta riposo →
             </button>
           </div>
         ) : (
           currentExercise && (
-            <div className="rounded-lg border border-ink-line bg-ink-panel p-5">
+            <div className="min-w-0 rounded-xl border border-ink-line bg-ink-panel p-5">
               <div className="mb-3 text-center">
                 <h2 className="font-display text-lg font-semibold text-paper">{currentExercise.name}</h2>
-                <p className="font-mono text-xs text-paper-muted">
+                <p className="text-sm text-paper-muted">
                   Serie {currentSet}/{currentExercise.sets} · {currentExercise.reps} reps
                   {currentExercise.restSeconds ? ` · riposo ${currentExercise.restSeconds}s` : ""}
                 </p>
@@ -260,13 +251,13 @@ export default function WorkoutSessionPlayerPage() {
               <div className="mt-4 flex gap-2">
                 <button
                   onClick={handleSkipExercise}
-                  className="rounded-md border border-ink-line px-4 py-2.5 text-sm text-paper-muted hover:text-paper"
+                  className="rounded-lg border border-ink-line px-4 py-2.5 text-sm text-paper-muted hover:text-paper"
                 >
                   Salta esercizio
                 </button>
                 <button
                   onClick={handleSetDone}
-                  className="flex-1 rounded-md bg-growth py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+                  className="flex-1 rounded-lg bg-growth py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
                 >
                   Serie completata ✓
                 </button>

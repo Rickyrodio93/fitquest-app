@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { GOAL_TEMPLATES } from "@/features/goals/defaults";
 import type { GoalCategory } from "@/features/goals/types";
+import { Card } from "@/components/ui/Card";
+import { TopNav } from "@/components/ui/TopNav";
+import { buttonStyles } from "@/components/ui/buttonStyles";
 
 interface Goal {
   id: string;
@@ -34,16 +37,19 @@ const DIFFICULTY_OPTIONS = [
   { label: "Ambizioso", weight: 1.5 },
 ];
 
+const inputStyles =
+  "w-full rounded-lg border border-ink-line bg-ink px-3 py-2.5 text-sm text-paper outline-none focus:border-growth min-w-0";
+const labelStyles = "mb-1.5 block text-sm text-paper-muted";
+
 export default function GoalsPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Stato del form di creazione
   const [selectedTemplateIdx, setSelectedTemplateIdx] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<GoalCategory>("CONSISTENCY");
@@ -53,7 +59,6 @@ export default function GoalsPage() {
   const [difficultyWeight, setDifficultyWeight] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Stato per l'incremento rapido di progresso per-obiettivo
   const [progressInputs, setProgressInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -120,7 +125,7 @@ export default function GoalsPage() {
 
   async function handleRecordProgress(goalId: string) {
     const raw = progressInputs[goalId];
-    const increment = raw ? Number(raw) : 1; // default: +1 se non specificato
+    const increment = raw ? Number(raw) : 1;
     if (Number.isNaN(increment)) return;
 
     const res = await fetch(`/api/goals/${goalId}/progress`, {
@@ -161,175 +166,145 @@ export default function GoalsPage() {
   if (status === "loading" || isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-ink">
-        <p className="font-mono text-sm text-paper-muted">Caricamento…</p>
+        <p className="text-sm text-paper-muted">Caricamento…</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-grid bg-grid px-4 py-10">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-8 flex items-center justify-between">
-          <div>
-            <span className="font-mono text-xs uppercase tracking-[0.2em] text-paper-muted">
-              FitQuest
-            </span>
-            <h1 className="font-display text-2xl font-semibold text-paper">I tuoi obiettivi</h1>
-          </div>
-          <div className="flex gap-3">
-            <a href="/dashboard" className="font-mono text-xs text-paper-muted hover:text-paper">
-              ← Dashboard
-            </a>
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="rounded-md bg-growth px-4 py-2 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
-            >
-              {showForm ? "Annulla" : "+ Nuovo obiettivo"}
-            </button>
-          </div>
-        </header>
+    <main className="min-h-screen bg-ink px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-2xl min-w-0">
+        <TopNav userName={session?.user?.name} />
 
-        {/* Form di creazione */}
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h1 className="font-display text-2xl font-semibold text-paper">I tuoi obiettivi</h1>
+          <button onClick={() => setShowForm((v) => !v)} className={buttonStyles.primary}>
+            {showForm ? "Annulla" : "+ Nuovo"}
+          </button>
+        </div>
+
         {showForm && (
-          <form
-            onSubmit={handleCreateGoal}
-            className="mb-8 space-y-5 rounded-lg border border-ink-line bg-ink-panel p-6"
-          >
-            <div>
-              <span className="mb-2 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                Parti da un template
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {GOAL_TEMPLATES.map((t, idx) => (
-                  <button
-                    key={t.title}
-                    type="button"
-                    onClick={() => applyTemplate(idx)}
-                    className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                      selectedTemplateIdx === idx
-                        ? "border-growth bg-growth/10 text-paper"
-                        : "border-ink-line text-paper-muted hover:border-ink-line/70"
-                    }`}
-                  >
-                    {CATEGORY_LABELS[t.category]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block sm:col-span-2">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Titolo
-                </span>
-                <input
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Es. Allenati con costanza"
-                  className="w-full rounded-md border border-ink-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-growth"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Categoria
-                </span>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as GoalCategory)}
-                  className="w-full rounded-md border border-ink-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-growth"
-                >
-                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
+          <form onSubmit={handleCreateGoal} className="mb-6">
+            <Card className="space-y-5">
+              <div>
+                <span className={labelStyles}>Parti da un template</span>
+                <div className="flex flex-wrap gap-2">
+                  {GOAL_TEMPLATES.map((t, idx) => (
+                    <button
+                      key={t.title}
+                      type="button"
+                      onClick={() => applyTemplate(idx)}
+                      className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                        selectedTemplateIdx === idx
+                          ? "border-growth bg-growth/10 text-paper"
+                          : "border-ink-line text-paper-muted hover:border-paper-muted"
+                      }`}
+                    >
+                      {CATEGORY_LABELS[t.category]}
+                    </button>
                   ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Unità di misura
-                </span>
-                <input
-                  required
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  placeholder="Es. kg, sessioni, minuti"
-                  className="w-full rounded-md border border-ink-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-growth"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Target — {targetValue}
-                </span>
-                <input
-                  type="range"
-                  min={1}
-                  max={100}
-                  value={targetValue}
-                  onChange={(e) => setTargetValue(Number(e.target.value))}
-                  className="w-full accent-growth"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                  Scadenza — tra {durationDays} giorni
-                </span>
-                <input
-                  type="range"
-                  min={7}
-                  max={180}
-                  step={1}
-                  value={durationDays}
-                  onChange={(e) => setDurationDays(Number(e.target.value))}
-                  className="w-full accent-growth"
-                />
-              </label>
-            </div>
-
-            <div>
-              <span className="mb-2 block font-mono text-[11px] uppercase tracking-wide text-paper-muted">
-                Quanto è ambizioso? (influenza l&apos;impatto sull&apos;avatar al completamento)
-              </span>
-              <div className="flex gap-2">
-                {DIFFICULTY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.label}
-                    type="button"
-                    onClick={() => setDifficultyWeight(opt.weight)}
-                    className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
-                      difficultyWeight === opt.weight
-                        ? "border-effort bg-effort/10 text-paper"
-                        : "border-ink-line text-paper-muted hover:border-ink-line/70"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+                </div>
               </div>
-            </div>
 
-            {error && (
-              <p className="rounded-md border border-caution/40 bg-caution/10 px-3 py-2 text-sm text-caution">
-                {error}
-              </p>
-            )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block sm:col-span-2">
+                  <span className={labelStyles}>Titolo</span>
+                  <input
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Es. Allenati con costanza"
+                    className={inputStyles}
+                  />
+                </label>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-md bg-growth py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {isSubmitting ? "Creazione…" : "Crea obiettivo"}
-            </button>
+                <label className="block">
+                  <span className={labelStyles}>Categoria</span>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as GoalCategory)}
+                    className={inputStyles}
+                  >
+                    {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className={labelStyles}>Unità di misura</span>
+                  <input
+                    required
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    placeholder="Es. kg, sessioni, minuti"
+                    className={inputStyles}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className={labelStyles}>Target — {targetValue}</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={100}
+                    value={targetValue}
+                    onChange={(e) => setTargetValue(Number(e.target.value))}
+                    className="w-full accent-growth"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className={labelStyles}>Scadenza — tra {durationDays} giorni</span>
+                  <input
+                    type="range"
+                    min={7}
+                    max={180}
+                    step={1}
+                    value={durationDays}
+                    onChange={(e) => setDurationDays(Number(e.target.value))}
+                    className="w-full accent-growth"
+                  />
+                </label>
+              </div>
+
+              <div>
+                <span className={labelStyles}>
+                  Quanto è ambizioso? (influenza l&apos;impatto sull&apos;avatar al completamento)
+                </span>
+                <div className="flex gap-2">
+                  {DIFFICULTY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => setDifficultyWeight(opt.weight)}
+                      className={`flex-1 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                        difficultyWeight === opt.weight
+                          ? "border-effort bg-effort/10 text-paper"
+                          : "border-ink-line text-paper-muted hover:border-paper-muted"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {error && (
+                <p className="rounded-lg border border-caution/40 bg-caution/10 px-3 py-2 text-sm text-caution">
+                  {error}
+                </p>
+              )}
+
+              <button type="submit" disabled={isSubmitting} className={`w-full ${buttonStyles.primary}`}>
+                {isSubmitting ? "Creazione…" : "Crea obiettivo"}
+              </button>
+            </Card>
           </form>
         )}
 
-        {/* Obiettivi attivi */}
         <GoalSection title="Attivi" emptyLabel="Nessun obiettivo attivo. Creane uno per iniziare.">
           {grouped.active.map((goal) => (
             <ActiveGoalCard
@@ -344,16 +319,19 @@ export default function GoalsPage() {
           ))}
         </GoalSection>
 
-        {/* In pausa */}
         {grouped.paused.length > 0 && (
           <GoalSection title="In pausa">
             {grouped.paused.map((goal) => (
-              <PausedGoalCard key={goal.id} goal={goal} onResume={() => handleToggleStatus(goal)} onDelete={() => handleDelete(goal.id)} />
+              <PausedGoalCard
+                key={goal.id}
+                goal={goal}
+                onResume={() => handleToggleStatus(goal)}
+                onDelete={() => handleDelete(goal.id)}
+              />
             ))}
           </GoalSection>
         )}
 
-        {/* Completati */}
         {grouped.completed.length > 0 && (
           <GoalSection title="Completati">
             {grouped.completed.map((goal) => (
@@ -362,7 +340,6 @@ export default function GoalsPage() {
           </GoalSection>
         )}
 
-        {/* Falliti */}
         {grouped.failed.length > 0 && (
           <GoalSection title="Non riusciti">
             {grouped.failed.map((goal) => (
@@ -387,9 +364,9 @@ function GoalSection({
   const hasChildren = Array.isArray(children) ? children.length > 0 : !!children;
   return (
     <section className="mb-6">
-      <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-paper-muted">{title}</h2>
+      <h2 className="mb-3 text-sm font-medium text-paper-muted">{title}</h2>
       {!hasChildren && emptyLabel ? (
-        <p className="rounded-lg border border-dashed border-ink-line p-6 text-center text-sm text-paper-muted">
+        <p className="rounded-xl border border-dashed border-ink-line p-6 text-center text-sm text-paper-muted">
           {emptyLabel}
         </p>
       ) : (
@@ -420,30 +397,30 @@ function ActiveGoalCard({
     : null;
 
   return (
-    <div className="rounded-lg border border-ink-line bg-ink-panel p-4">
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <div>
+    <div className="min-w-0 rounded-xl border border-ink-line/70 bg-ink-panel p-4 sm:p-5">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-paper">{goal.title}</p>
-          <p className="font-mono text-[11px] text-paper-muted">
+          <p className="text-sm text-paper-muted">
             {CATEGORY_LABELS[goal.category]}
             {daysLeft !== null && ` · ${daysLeft > 0 ? `${daysLeft} giorni rimasti` : "scaduto"}`}
           </p>
         </div>
-        <div className="flex gap-1">
-          <button onClick={onPause} title="Metti in pausa" className="text-xs text-paper-muted hover:text-effort">
+        <div className="flex shrink-0 gap-1">
+          <button onClick={onPause} title="Metti in pausa" className="text-sm text-paper-muted hover:text-effort">
             ⏸
           </button>
-          <button onClick={onDelete} title="Elimina" className="text-xs text-paper-muted hover:text-caution">
+          <button onClick={onDelete} title="Elimina" className="text-sm text-paper-muted hover:text-caution">
             ✕
           </button>
         </div>
       </div>
 
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="font-mono text-paper-muted">
+      <div className="mb-1.5 flex items-center justify-between text-sm">
+        <span className="font-mono text-xs text-paper-muted">
           {goal.currentValue}/{goal.targetValue} {goal.unit}
         </span>
-        <span className="font-mono text-growth">{pct}%</span>
+        <span className="font-mono text-xs text-growth">{pct}%</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-ink">
         <div className="h-full bg-growth transition-all duration-500" style={{ width: `${pct}%` }} />
@@ -455,11 +432,11 @@ function ActiveGoalCard({
           value={inputValue}
           onChange={(e) => onInputChange(e.target.value)}
           placeholder="+1"
-          className="w-20 rounded-md border border-ink-line bg-ink px-2 py-1.5 text-sm text-paper outline-none focus:border-growth"
+          className="w-16 min-w-0 rounded-lg border border-ink-line bg-ink px-2 py-1.5 text-sm text-paper outline-none focus:border-growth"
         />
         <button
           onClick={onRecordProgress}
-          className="rounded-md border border-growth/40 bg-growth/10 px-3 py-1.5 text-xs font-semibold text-growth hover:bg-growth/20"
+          className="rounded-lg border border-growth/40 bg-growth/10 px-3 py-1.5 text-sm font-medium text-growth hover:bg-growth/20"
         >
           Registra progresso
         </button>
@@ -470,18 +447,18 @@ function ActiveGoalCard({
 
 function PausedGoalCard({ goal, onResume, onDelete }: { goal: Goal; onResume: () => void; onDelete: () => void }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-ink-line bg-ink-panel p-4 opacity-70">
-      <div>
+    <div className="flex min-w-0 items-center justify-between rounded-xl border border-ink-line/70 bg-ink-panel p-4 opacity-70">
+      <div className="min-w-0">
         <p className="text-sm text-paper">{goal.title}</p>
-        <p className="font-mono text-[11px] text-paper-muted">
+        <p className="text-sm text-paper-muted">
           {goal.currentValue}/{goal.targetValue} {goal.unit}
         </p>
       </div>
-      <div className="flex gap-2">
-        <button onClick={onResume} className="text-xs text-growth hover:underline">
+      <div className="flex shrink-0 gap-3">
+        <button onClick={onResume} className="text-sm text-growth hover:underline">
           Riattiva
         </button>
-        <button onClick={onDelete} className="text-xs text-paper-muted hover:text-caution">
+        <button onClick={onDelete} className="text-sm text-paper-muted hover:text-caution">
           Elimina
         </button>
       </div>
@@ -491,28 +468,28 @@ function PausedGoalCard({ goal, onResume, onDelete }: { goal: Goal; onResume: ()
 
 function CompletedGoalCard({ goal }: { goal: Goal }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-growth/30 bg-growth/5 p-4">
-      <div>
+    <div className="flex min-w-0 items-center justify-between rounded-xl border border-growth/30 bg-growth/5 p-4">
+      <div className="min-w-0">
         <p className="text-sm text-paper">✓ {goal.title}</p>
-        <p className="font-mono text-[11px] text-paper-muted">
+        <p className="text-sm text-paper-muted">
           {goal.completedAt && new Date(goal.completedAt).toLocaleDateString("it-IT")}
         </p>
       </div>
-      <span className="font-mono text-xs text-growth">{CATEGORY_LABELS[goal.category]}</span>
+      <span className="shrink-0 text-sm text-growth">{CATEGORY_LABELS[goal.category]}</span>
     </div>
   );
 }
 
 function FailedGoalCard({ goal, onDelete }: { goal: Goal; onDelete: () => void }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-caution/30 bg-caution/5 p-4">
-      <div>
+    <div className="flex min-w-0 items-center justify-between rounded-xl border border-caution/30 bg-caution/5 p-4">
+      <div className="min-w-0">
         <p className="text-sm text-paper">{goal.title}</p>
-        <p className="font-mono text-[11px] text-paper-muted">
+        <p className="text-sm text-paper-muted">
           {goal.currentValue}/{goal.targetValue} {goal.unit} — scaduto
         </p>
       </div>
-      <button onClick={onDelete} className="text-xs text-paper-muted hover:text-caution">
+      <button onClick={onDelete} className="shrink-0 text-sm text-paper-muted hover:text-caution">
         Elimina
       </button>
     </div>
