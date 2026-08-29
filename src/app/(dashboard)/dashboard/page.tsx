@@ -101,15 +101,17 @@ export default function DashboardPage() {
   const activeGoals = goals.filter((g) => g.status === "ACTIVE");
 
   return (
-    <main className="min-h-screen bg-ink px-6 py-8">
-      <div className="mx-auto max-w-5xl">
+    <main className="min-h-screen bg-ink px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-5xl min-w-0">
         <TopNav userName={session?.user?.name} />
 
-        <div className="grid gap-6 lg:grid-cols-[380px_1fr] lg:items-start">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[380px_1fr] lg:items-start">
           {/* Avatar — hero della pagina */}
-          <Avatar3D state={avatar} athleteName={session?.user?.name ?? "Il tuo atleta"} />
+          <div className="min-w-0">
+            <Avatar3D state={avatar} athleteName={session?.user?.name ?? "Il tuo atleta"} />
+          </div>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             {/* Obiettivi attivi */}
             <Card
               title="Obiettivi attivi"
@@ -169,7 +171,7 @@ export default function DashboardPage() {
               </p>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border border-ink-line/70 p-4">
+                <div className="flex flex-col gap-3 rounded-lg border border-ink-line/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-paper">Google Health</p>
                     <p className="text-sm text-paper-muted">Fitbit, Pixel Watch</p>
@@ -189,7 +191,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="rounded-lg border border-ink-line/70 p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-paper">Apple Health</p>
                       <p className="text-sm text-paper-muted">Via Shortcuts (nessuna API cloud diretta)</p>

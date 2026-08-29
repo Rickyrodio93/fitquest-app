@@ -14,7 +14,7 @@ interface CardProps {
  */
 export function Card({ title, action, children, className = "" }: CardProps) {
   return (
-    <section className={`rounded-xl border border-ink-line/70 bg-ink-panel p-7 ${className}`}>
+    <section className={`min-w-0 rounded-xl border border-ink-line/70 bg-ink-panel p-5 sm:p-7 ${className}`}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between">
           {title && <h2 className="font-display text-base font-semibold text-paper">{title}</h2>}

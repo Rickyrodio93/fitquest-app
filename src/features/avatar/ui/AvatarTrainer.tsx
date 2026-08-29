@@ -182,7 +182,7 @@ function AnimatedHumanoid({ state, pattern, repDurationSeconds = 2.4 }: Required
 
 export default function AvatarTrainer({ state, pattern, repDurationSeconds = 2.4 }: AvatarTrainerProps) {
   return (
-    <div className="h-80 w-full overflow-hidden rounded-md border border-ink-line bg-ink sm:h-96">
+    <div className="h-64 w-full min-w-0 overflow-hidden rounded-md border border-ink-line bg-ink sm:h-80 md:h-96">
       <Canvas camera={{ position: [0, 0.7, 2.8], fov: 42 }} shadows>
         <ambientLight intensity={0.55} />
         <directionalLight position={[2, 3, 2]} intensity={0.9} castShadow />

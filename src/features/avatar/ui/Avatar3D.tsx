@@ -165,7 +165,7 @@ export default function Avatar3D({ state, athleteName = "Il tuo atleta" }: Avata
   const description = describeAvatarState(state);
 
   return (
-    <div className="w-full max-w-sm rounded-lg border border-ink-line bg-ink-panel bg-grid bg-grid p-6">
+    <div className="w-full min-w-0 rounded-xl border border-ink-line bg-ink-panel bg-grid bg-grid p-5 sm:p-6">
       <div className="flex items-center justify-between border-b border-ink-line pb-3">
         <span className="font-mono text-xs uppercase tracking-[0.2em] text-paper-muted">
           Scheda atleta · 3D
@@ -177,7 +177,7 @@ export default function Avatar3D({ state, athleteName = "Il tuo atleta" }: Avata
         <p className="font-mono text-xs text-growth">{description}</p>
       </div>
 
-      <div className="mt-4 h-72 w-full overflow-hidden rounded-md border border-ink-line/60 bg-ink">
+      <div className="mt-4 h-56 w-full min-w-0 overflow-hidden rounded-md border border-ink-line/60 bg-ink sm:h-72">
         <Canvas camera={{ position: [0, 0.9, 2.6], fov: 40 }} shadows>
           <ambientLight intensity={0.55} />
           <directionalLight position={[2, 3, 2]} intensity={0.9} castShadow />
