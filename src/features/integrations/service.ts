@@ -1,8 +1,15 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { exchangeGoogleHealthCode, fetchRecentBodyMetrics, refreshGoogleHealthToken } from "./googleHealth";
+import {
+  exchangeGoogleHealthCode,
+  fetchRecentBodyMetrics,
+  fetchRecentActivitySamples,
+  fetchRecentExerciseSessions,
+  refreshGoogleHealthToken,
+} from "./googleHealth";
 import { ingestSamples } from "./ingest";
 import { NormalizedSample } from "./types";
+import { logWorkoutSession } from "@/features/workouts/logSession";
 
 // ---------------------------------------------------------------
 // GOOGLE HEALTH
@@ -56,9 +63,18 @@ async function getValidGoogleAccessToken(userId: string): Promise<string> {
 export async function syncGoogleHealthForUser(userId: string) {
   let accessToken = await getValidGoogleAccessToken(userId);
 
-  let samples: NormalizedSample[];
+  async function fetchEverything(token: string) {
+    const [bodyMetrics, activitySamples, exerciseSessions] = await Promise.all([
+      fetchRecentBodyMetrics(token),
+      fetchRecentActivitySamples(token),
+      fetchRecentExerciseSessions(token),
+    ]);
+    return { bodyMetrics, activitySamples, exerciseSessions };
+  }
+
+  let data: Awaited<ReturnType<typeof fetchEverything>>;
   try {
-    samples = await fetchRecentBodyMetrics(accessToken);
+    data = await fetchEverything(accessToken);
   } catch {
     // Token probabilmente scaduto: proviamo un refresh e ripetiamo una volta
     const integration = await prisma.wearableIntegration.findUniqueOrThrow({
@@ -72,17 +88,38 @@ export async function syncGoogleHealthForUser(userId: string) {
       where: { userId_provider: { userId, provider: "GOOGLE_HEALTH" } },
       data: { accessToken: refreshed.accessToken },
     });
-    samples = await fetchRecentBodyMetrics(accessToken);
+    data = await fetchEverything(accessToken);
   }
 
-  const result = await ingestSamples(userId, samples);
+  // Peso, % massa grassa, passi, calorie → BodyMetric (+ ricalibrazione avatar se rilevante)
+  const allMetricSamples: NormalizedSample[] = [...data.bodyMetrics, ...data.activitySamples];
+  const metricsResult = await ingestSamples(userId, allMetricSamples);
+
+  // Sessioni di allenamento reali → WorkoutLog, con lo stesso effetto a
+  // cascata (boost avatar + avanzamento obiettivi costanza) del log manuale.
+  // logWorkoutSession deduplica da solo confrontando userId+source+performedAt,
+  // quindi è sicuro richiamarlo ad ogni sync anche per sessioni già importate.
+  let importedWorkouts = 0;
+  for (const session of data.exerciseSessions) {
+    const result = await logWorkoutSession(userId, {
+      title: session.title,
+      durationMin: session.durationMin,
+      performedAt: session.startedAt,
+      source: "GOOGLE_HEALTH",
+    });
+    if (!("skipped" in result)) importedWorkouts++;
+  }
 
   await prisma.wearableIntegration.update({
     where: { userId_provider: { userId, provider: "GOOGLE_HEALTH" } },
     data: { lastSyncAt: new Date() },
   });
 
-  return result;
+  return {
+    stored: metricsResult.stored,
+    avatarRecalibrated: metricsResult.avatarRecalibrated,
+    importedWorkouts,
+  };
 }
 
 // ---------------------------------------------------------------

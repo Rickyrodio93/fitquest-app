@@ -131,7 +131,6 @@ export async function fetchRecentBodyMetrics(
     { path: "weight", filterField: "weight", sampleKey: "WEIGHT" },
     { path: "body-fat", filterField: "body_fat", sampleKey: "BODY_FAT_PERCENT" },
   ];
-
   for (const dt of dataTypes) {
     const url = `${GOOGLE_HEALTH_API_BASE}/users/me/dataTypes/${dt.path}/dataPoints?filter=${encodeURIComponent(
       `${dt.filterField}.sample_time.physical_time >= "${sinceIso}"`
@@ -171,4 +170,142 @@ export async function fetchRecentBodyMetrics(
   }
 
   return samples;
+}
+
+export interface RawExerciseSession {
+  title: string;
+  durationMin: number;
+  startedAt: Date;
+  caloriesBurned: number | null;
+}
+
+/**
+ * Legge passi e calorie totali recenti. Stesso pattern difensivo di
+ * fetchRecentBodyMetrics: se un tipo di dato fallisce, non blocchiamo
+ * gli altri.
+ */
+export async function fetchRecentActivitySamples(
+  accessToken: string,
+  sinceDays = 14
+): Promise<NormalizedSample[]> {
+  const sinceIso = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
+  const samples: NormalizedSample[] = [];
+
+  const dataTypes: Array<{ path: string; filterField: string; sampleKey: "STEPS" | "CALORIES_BURNED" }> = [
+    { path: "steps", filterField: "steps", sampleKey: "STEPS" },
+    { path: "total-calories", filterField: "total_calories", sampleKey: "CALORIES_BURNED" },
+  ];
+
+  for (const dt of dataTypes) {
+    const url = `${GOOGLE_HEALTH_API_BASE}/users/me/dataTypes/${dt.path}/dataPoints?filter=${encodeURIComponent(
+      `${dt.filterField}.interval.start_time.physical_time >= "${sinceIso}"`
+    )}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      console.error(`Errore lettura ${dt.path} da Google Health API:`, res.status);
+      continue;
+    }
+
+    const data = await res.json();
+    for (const point of data.dataPoints ?? []) {
+      // I tipi "steps"/"total-calories" sono a INTERVALLO (non a
+      // campione singolo come peso/grasso): il valore rappresenta un
+      // periodo, quindi usiamo l'orario di fine come recordedAt.
+      const recordedAt = new Date(
+        point.interval?.endTime?.physicalTime ?? point.interval?.startTime?.physicalTime ?? Date.now()
+      );
+
+      if (dt.sampleKey === "STEPS" && point.steps) {
+        const value = point.steps.count ?? point.steps.value;
+        if (typeof value === "number") {
+          samples.push({ type: "STEPS", value, unit: "passi", recordedAt, source: "GOOGLE_HEALTH" });
+        }
+      }
+      if (dt.sampleKey === "CALORIES_BURNED" && point.totalCalories) {
+        const value = point.totalCalories.kilocalories ?? point.totalCalories.value;
+        if (typeof value === "number") {
+          samples.push({ type: "CALORIES_BURNED", value, unit: "kcal", recordedAt, source: "GOOGLE_HEALTH" });
+        }
+      }
+    }
+  }
+
+  return samples;
+}
+
+/**
+ * Legge le sessioni di allenamento registrate dal dispositivo
+ * (dataType "exercise" — record di tipo SESSIONE, non campione).
+ *
+ * ATTENZIONE — nota di trasparenza tecnica: la Google Health API è
+ * recente e la forma esatta del JSON per le sessioni "exercise" non è
+ * completamente documentata pubblicamente. Il parsing qui sotto è
+ * difensivo (prova più percorsi di campo plausibili) ma va VERIFICATO
+ * contro una risposta reale al primo sync effettivo — se non trova
+ * corrispondenze, stampa il punto grezzo in console per poterlo
+ * ispezionare e correggere i nomi dei campi di conseguenza.
+ */
+export async function fetchRecentExerciseSessions(
+  accessToken: string,
+  sinceDays = 14
+): Promise<RawExerciseSession[]> {
+  const sinceIso = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
+  const sessions: RawExerciseSession[] = [];
+
+  const url = `${GOOGLE_HEALTH_API_BASE}/users/me/dataTypes/exercise/dataPoints?filter=${encodeURIComponent(
+    `exercise.session.start_time.physical_time >= "${sinceIso}"`
+  )}`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+  });
+
+  if (!res.ok) {
+    console.error("Errore lettura sessioni exercise da Google Health API:", res.status);
+    return sessions;
+  }
+
+  const data = await res.json();
+  for (const point of data.dataPoints ?? []) {
+    const session = point.exercise ?? point.session ?? point;
+    const startRaw = session?.startTime?.physicalTime ?? session?.session?.startTime ?? point.startTime;
+    const endRaw = session?.endTime?.physicalTime ?? session?.session?.endTime ?? point.endTime;
+
+    if (!startRaw) {
+      console.warn("Sessione exercise non riconosciuta, punto grezzo:", JSON.stringify(point));
+      continue;
+    }
+
+    const startedAt = new Date(startRaw);
+    const durationMin = endRaw
+      ? Math.max(1, Math.round((new Date(endRaw).getTime() - startedAt.getTime()) / 60000))
+      : 30; // fallback prudente se l'orario di fine non è disponibile
+
+    const activityName =
+      session?.activityType ?? session?.exerciseType ?? session?.name ?? "Allenamento (Google Health)";
+    const caloriesBurned = session?.calories?.kilocalories ?? session?.calories ?? null;
+
+    sessions.push({
+      title: humanizeActivityName(activityName),
+      durationMin,
+      startedAt,
+      caloriesBurned: typeof caloriesBurned === "number" ? caloriesBurned : null,
+    });
+  }
+
+  return sessions;
+}
+
+function humanizeActivityName(raw: string): string {
+  // Google spesso usa costanti tipo "RUNNING", "STRENGTH_TRAINING" —
+  // le rendiamo leggibili invece di mostrarle urlate e con underscore
+  return raw
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }

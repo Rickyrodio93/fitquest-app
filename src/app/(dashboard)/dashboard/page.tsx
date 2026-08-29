@@ -64,11 +64,11 @@ export default function DashboardPage() {
       const res = await fetch("/api/integrations/google-health/sync", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Sync fallito");
-      setSyncMessage(
-        data.avatarRecalibrated
-          ? `${data.stored} dati sincronizzati — avatar aggiornato.`
-          : `${data.stored} dati sincronizzati.`
-      );
+      const parts = [];
+      if (data.stored > 0) parts.push(`${data.stored} dati`);
+      if (data.importedWorkouts > 0) parts.push(`${data.importedWorkouts} allenamenti`);
+      const summary = parts.length > 0 ? parts.join(" e ") + " sincronizzati" : "Sincronizzato";
+      setSyncMessage(data.avatarRecalibrated ? `${summary} — avatar aggiornato.` : `${summary}.`);
       // Ricarica l'avatar per riflettere un'eventuale ricalibrazione
       const avatarRes = await fetch("/api/avatar");
       const avatarData = await avatarRes.json();

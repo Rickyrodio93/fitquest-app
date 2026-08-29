@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { applyEffortEvent, AvatarState } from "@/features/avatar";
 import { recordGoalProgress } from "@/features/goals";
+import type { MetricSource } from "@prisma/client";
 
 interface LogSessionInput {
   title: string;
   durationMin: number;
+  /** Se non passato, usa l'istante corrente (log manuale) */
+  performedAt?: Date;
+  /** MANUAL di default; usare la fonte reale per gli import da wearable */
+  source?: MetricSource;
 }
 
 /**
@@ -18,10 +23,32 @@ interface LogSessionInput {
  *    (es. "12 allenamenti in 30 giorni") — se questo porta al
  *    completamento dell'obiettivo, recordGoalProgress applicherà
  *    automaticamente anche il suo impatto sull'avatar
+ *
+ * Per le sessioni importate da wearable (source diverso da MANUAL),
+ * evitiamo doppioni: se una sessione con lo stesso utente/fonte/orario
+ * esiste già (tipico di un re-sync), la saltiamo senza riapplicare
+ * gli effetti sull'avatar/obiettivi una seconda volta.
  */
 export async function logWorkoutSession(userId: string, input: LogSessionInput) {
+  const source: MetricSource = input.source ?? "MANUAL";
+
+  if (source !== "MANUAL" && input.performedAt) {
+    const existing = await prisma.workoutLog.findFirst({
+      where: { userId, source, performedAt: input.performedAt },
+    });
+    if (existing) {
+      return { log: existing, avatar: null, goalUpdates: [], skipped: true as const };
+    }
+  }
+
   const log = await prisma.workoutLog.create({
-    data: { userId, title: input.title, durationMin: input.durationMin, source: "MANUAL" },
+    data: {
+      userId,
+      title: input.title,
+      durationMin: input.durationMin,
+      source,
+      ...(input.performedAt ? { performedAt: input.performedAt } : {}),
+    },
   });
 
   let updatedAvatar = null;
